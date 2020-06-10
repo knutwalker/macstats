@@ -1,7 +1,7 @@
 #[cfg(not(target_os = "macos"))]
 compile_error!("works only on macOS");
 
-use macstats::{Celsius, Error as SmcError, Smc, Watt};
+use macsmc::{Celsius, Error as SmcError, Smc, Watt};
 use std::{
     cmp::Ordering,
     env,

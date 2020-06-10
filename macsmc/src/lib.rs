@@ -1,12 +1,25 @@
-use crate::{Error as PubError, Result as PubResult};
+#[cfg(not(target_os = "macos"))]
+compile_error!("works only on macOS");
+
 use std::{
     array::TryFromSliceError,
     convert::{TryFrom, TryInto},
-    ffi::CStr,
+    error::Error as StdError,
+    fmt::{self, Display},
     num::TryFromIntError,
     ops::Deref,
     time::Duration,
 };
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    SmcNotAvailable,
+    InsufficientPrivileges,
+    SmcError(i32),
+    DataError { key: u32, tpe: u32 },
+}
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct Celsius(pub f32);
@@ -129,6 +142,22 @@ impl FanSpeed {
 pub enum FanMode {
     Forced,
     Auto,
+}
+
+impl From<bool> for FanMode {
+    fn from(v: bool) -> Self {
+        if v {
+            FanMode::Forced
+        } else {
+            FanMode::Auto
+        }
+    }
+}
+
+impl Default for FanMode {
+    fn default() -> Self {
+        FanMode::Auto
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -257,66 +286,26 @@ pub enum DataValue {
 #[derive(Debug)]
 pub struct Dbg(String, pub DataValue);
 
-type Result<T> = std::result::Result<T, InternalError>;
-enum InternalError {
-    SmcNotFound,
-    SmcFailedToOpen(i32),
-    NotPrivlileged,
-    UnknownSmc(i32, u8),
-    _UnknownKey,
-    _DataKeyError(u32),
-    _DataValueError,
-    // for pub error
-    DataError { key: u32, tpe: u32 },
-}
-
-impl From<TryFromSliceError> for InternalError {
-    fn from(_: TryFromSliceError) -> Self {
-        Self::_DataValueError
-    }
-}
-
-impl From<TryFromIntError> for InternalError {
-    fn from(_: TryFromIntError) -> Self {
-        Self::_DataValueError
-    }
-}
-
-impl From<InternalError> for PubError {
-    fn from(ie: InternalError) -> Self {
-        match ie {
-            InternalError::SmcNotFound => PubError::SmcNotAvailable,
-            InternalError::SmcFailedToOpen(_) => PubError::SmcNotAvailable,
-            InternalError::NotPrivlileged => PubError::InsufficientPrivileges,
-            InternalError::UnknownSmc(code, _) => PubError::SmcError(code),
-            InternalError::DataError { key, tpe } => PubError::DataError { key, tpe },
-            InternalError::_UnknownKey => unreachable!(),
-            InternalError::_DataValueError => unreachable!(),
-            InternalError::_DataKeyError(_) => unreachable!(),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Smc {
     inner: cffi::SMCConnection,
 }
 
 impl Smc {
-    pub fn connect() -> PubResult<Self> {
+    pub fn connect() -> Result<Self> {
         let inner = cffi::SMCConnection::new()?;
         Ok(Smc { inner })
     }
 
-    pub fn fans(&mut self) -> PubResult<FanIter> {
+    pub fn fans(&mut self) -> Result<FanIter> {
         FanIter::new(self)
     }
 
-    fn number_of_fans(&mut self) -> PubResult<u8> {
+    fn number_of_fans(&mut self) -> Result<u8> {
         Ok(self.inner.read_value(GetNumberOfFans)?)
     }
 
-    fn fan_speed(&mut self, fan: u8) -> PubResult<FanSpeed> {
+    fn fan_speed(&mut self, fan: u8) -> Result<FanSpeed> {
         let actual = self.inner.read_value(GetActualFanSpeed(fan))?;
         let min = self.inner.read_value(GetMinFanSpeed(fan))?;
         let max = self.inner.read_value(GetMaxFanSpeed(fan))?;
@@ -333,7 +322,7 @@ impl Smc {
         })
     }
 
-    pub fn battery_info(&mut self) -> PubResult<BatteryInfo> {
+    pub fn battery_info(&mut self) -> Result<BatteryInfo> {
         let BatteryStatus {
             charging,
             ac_present,
@@ -354,15 +343,15 @@ impl Smc {
         })
     }
 
-    fn number_of_batteries(&mut self) -> PubResult<u8> {
+    fn number_of_batteries(&mut self) -> Result<u8> {
         Ok(self.inner.read_value(GetNumberOfBatteries)?)
     }
 
-    pub fn battery_details(&mut self) -> PubResult<BatteryIter> {
+    pub fn battery_details(&mut self) -> Result<BatteryIter> {
         Ok(BatteryIter::new(self)?)
     }
 
-    fn battery_detail(&mut self, battery: u8) -> PubResult<BatteryDetail> {
+    fn battery_detail(&mut self, battery: u8) -> Result<BatteryDetail> {
         let cycles = self.inner.read_value(GetBatteryCycleCount(battery))?;
         let current_capacity = self.inner.read_value(GetBatteryCurrentCapacity(battery))?;
         let full_capacity = self.inner.read_value(GetBatteryFullCapacity(battery))?;
@@ -379,11 +368,11 @@ impl Smc {
         })
     }
 
-    fn number_of_cpus(&mut self) -> PubResult<u8> {
+    fn number_of_cpus(&mut self) -> Result<u8> {
         Ok(cffi::num_cpus().min(255) as u8)
     }
 
-    pub fn cpu_temperature(&mut self) -> PubResult<CpuTemperatures> {
+    pub fn cpu_temperature(&mut self) -> Result<CpuTemperatures> {
         let proximity = self.inner.read_value(CpuProximityTemperature)?;
         let die = self.inner.read_value(CpuDieTemperature)?;
         let graphics = self.inner.read_value(CpuGfxTemperature)?;
@@ -396,21 +385,21 @@ impl Smc {
         })
     }
 
-    pub fn cpu_core_temps(&mut self) -> PubResult<CpuIter> {
+    pub fn cpu_core_temps(&mut self) -> Result<CpuIter> {
         Ok(CpuIter::new(self)?)
     }
 
-    fn cpu_core_temperature(&mut self, core: u8) -> PubResult<Celsius> {
+    fn cpu_core_temperature(&mut self, core: u8) -> Result<Celsius> {
         Ok(self.inner.read_value(CpuCoreTemperature(core + 1))?)
     }
 
-    pub fn gpu_temperature(&mut self) -> PubResult<GpuTemperatures> {
+    pub fn gpu_temperature(&mut self) -> Result<GpuTemperatures> {
         let proximity = self.inner.read_value(GpuProximityTemperature)?;
         let die = self.inner.read_value(GpuDieTemperature)?;
         Ok(GpuTemperatures { proximity, die })
     }
 
-    pub fn other_temperatures(&mut self) -> PubResult<OtherTemperatures> {
+    pub fn other_temperatures(&mut self) -> Result<OtherTemperatures> {
         let memory_bank_proximity = self.inner.read_value(GetMemoryBankProximityTemperature)?;
         let mainboard_proximity = self.inner.read_value(GetMainboardProximityTemperature)?;
         let platform_controller_hub_die = self.inner.read_value(GetPCHDieTemperature)?;
@@ -439,7 +428,7 @@ impl Smc {
         })
     }
 
-    pub fn cpu_power(&mut self) -> PubResult<CpuPower> {
+    pub fn cpu_power(&mut self) -> Result<CpuPower> {
         let core = self.inner.read_value(CpuCorePower)?;
         let dram = self.inner.read_value(CpuDramPower)?;
         let gfx = self.inner.read_value(CpuGfxPower)?;
@@ -454,28 +443,28 @@ impl Smc {
         })
     }
 
-    pub fn gpu_power(&mut self) -> PubResult<Watt> {
+    pub fn gpu_power(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(GpuRailPower)?)
     }
 
-    pub fn power_dc_in(&mut self) -> PubResult<Watt> {
+    pub fn power_dc_in(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(DcInPower)?)
     }
 
-    pub fn power_system_total(&mut self) -> PubResult<Watt> {
+    pub fn power_system_total(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(SystemTotalPower)?)
     }
 
-    fn check(&mut self, name: &str) -> PubResult<Option<Dbg>> {
+    fn check(&mut self, name: &str) -> Result<Option<Dbg>> {
         let value = self.inner.opt_read_value(Check(name))?;
         Ok(value.map(|v| Dbg(name.to_string(), v)))
     }
 
-    pub fn number_of_keys(&mut self) -> PubResult<u32> {
+    pub fn number_of_keys(&mut self) -> Result<u32> {
         Ok(self.inner.read_value(NumberOfKeys)?)
     }
 
-    fn key_info(&mut self, name: &str) -> PubResult<String> {
+    fn key_info(&mut self, name: &str) -> Result<String> {
         let info = self.inner.key_info(Check(name))?;
         let key = info.key.to_be_bytes();
         let tpe = info.data_type.to_be_bytes();
@@ -488,7 +477,7 @@ impl Smc {
         ))
     }
 
-    pub fn key_info_by_index(&mut self, index: u32) -> PubResult<String> {
+    pub fn key_info_by_index(&mut self, index: u32) -> Result<String> {
         let info = self.inner.key_info_by_index(index)?;
         let key = info.key.to_be_bytes();
         let key = std::str::from_utf8(&key).map_err(|_| InternalError::DataError {
@@ -498,7 +487,7 @@ impl Smc {
         self.key_info(key)
     }
 
-    pub fn key_data_by_index(&mut self, index: u32) -> PubResult<Dbg> {
+    pub fn key_data_by_index(&mut self, index: u32) -> Result<Dbg> {
         let info = self.inner.key_info_by_index(index)?;
         let key = info.key.to_be_bytes();
         let key = std::str::from_utf8(&key).map_err(|_| InternalError::DataError {
@@ -513,13 +502,13 @@ impl Smc {
 macro_rules! iter_impl {
     ($struct:ident = $max:ident : $get:ident -> $out:tt) => {
         pub struct $struct<'a> {
-            smc: &'a mut $crate::smc::Smc,
+            smc: &'a mut $crate::Smc,
             next: u8,
             max: u8,
         }
 
         impl<'a> $struct<'a> {
-            fn new(smc: &'a mut $crate::smc::Smc) -> $crate::Result<Self> {
+            fn new(smc: &'a mut $crate::Smc) -> $crate::Result<Self> {
                 let max = smc.$max()?;
                 Ok(Self { smc, next: 0, max })
             }
@@ -579,7 +568,7 @@ trait ReadAction {
 
     fn key(&self) -> CommandKey;
 
-    fn parse(self, val: DataValue) -> Result<Self::Out>
+    fn parse(self, val: DataValue) -> InternalResult<Self::Out>
     where
         Self: Sized,
     {
@@ -588,11 +577,11 @@ trait ReadAction {
 }
 
 trait ValueParser: Sized {
-    fn parse(val: DataValue) -> Result<Self>;
+    fn parse(val: DataValue) -> InternalResult<Self>;
 }
 
 impl ValueParser for Celsius {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Float(value) => Ok(Self(value)),
             _ => Err(InternalError::_DataValueError),
@@ -601,7 +590,7 @@ impl ValueParser for Celsius {
 }
 
 impl ValueParser for Rpm {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Float(value) => Ok(Self(value)),
             DataValue::Uint(v) => Ok(Self(f32::from(u16::try_from(v)?))),
@@ -610,24 +599,8 @@ impl ValueParser for Rpm {
     }
 }
 
-impl From<bool> for FanMode {
-    fn from(v: bool) -> Self {
-        if v {
-            FanMode::Forced
-        } else {
-            FanMode::Auto
-        }
-    }
-}
-
-impl Default for FanMode {
-    fn default() -> Self {
-        FanMode::Auto
-    }
-}
-
 impl ValueParser for FanMode {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Flag(bool) => Ok(bool.into()),
             DataValue::Int(value) => Ok((value != 0).into()),
@@ -646,7 +619,7 @@ struct BatteryStatus {
 }
 
 impl ValueParser for BatteryStatus {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Uint(val) => {
                 let charging = val & 0x01 == 0x01;
@@ -664,7 +637,7 @@ impl ValueParser for BatteryStatus {
 }
 
 impl ValueParser for MilliAmpereHours {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Uint(v) => Ok(Self(v.try_into()?)),
             _ => Err(InternalError::_DataValueError),
@@ -673,7 +646,7 @@ impl ValueParser for MilliAmpereHours {
 }
 
 impl ValueParser for MilliAmpere {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Int(v) => Ok(Self(v.try_into()?)),
             _ => Err(InternalError::_DataValueError),
@@ -682,7 +655,7 @@ impl ValueParser for MilliAmpere {
 }
 
 impl ValueParser for Watt {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Float(v) => Ok(Self(v)),
             _ => Err(InternalError::_DataValueError),
@@ -691,7 +664,7 @@ impl ValueParser for Watt {
 }
 
 impl ValueParser for Volt {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Float(v) => Ok(Self(v)),
             DataValue::Uint(v) => Ok(Self(f32::from(u16::try_from(v)?) / 1000.0)),
@@ -701,7 +674,7 @@ impl ValueParser for Volt {
 }
 
 impl ValueParser for bool {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Flag(v) => Ok(v),
             _ => Err(InternalError::_DataValueError),
@@ -710,7 +683,7 @@ impl ValueParser for bool {
 }
 
 impl ValueParser for u8 {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Uint(v) => Ok(u8::try_from(v)?),
             _ => Err(InternalError::_DataValueError),
@@ -719,7 +692,7 @@ impl ValueParser for u8 {
 }
 
 impl ValueParser for u32 {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         match val {
             DataValue::Uint(v) => Ok(u32::try_from(v)?),
             _ => Err(InternalError::_DataValueError),
@@ -728,17 +701,32 @@ impl ValueParser for u32 {
 }
 
 impl ValueParser for DataValue {
-    fn parse(val: DataValue) -> Result<Self> {
+    fn parse(val: DataValue) -> InternalResult<Self> {
         Ok(val)
     }
 }
+
+struct Check<'a>(&'a str);
+
+impl<'a> ReadAction for Check<'a> {
+    type Out = DataValue;
+
+    fn key(&self) -> CommandKey {
+        let bytes = self.0.as_bytes();
+        let key = u32::from_be_bytes(bytes.try_into().unwrap());
+        CommandKey(key)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct DataType(DataValue, u32);
 
 macro_rules! read_impl {
     ($struct:ident = $key:ident -> $out:tt) => {
         #[derive(Debug)]
         struct $struct;
 
-        impl $crate::smc::ReadAction for $struct {
+        impl $crate::ReadAction for $struct {
             type Out = $out;
 
             fn key(&self) -> CommandKey {
@@ -751,7 +739,7 @@ macro_rules! read_impl {
         #[derive(Debug)]
         struct $struct($arg);
 
-        impl $crate::smc::ReadAction for $struct {
+        impl $crate::ReadAction for $struct {
             type Out = $out;
 
             fn key(&self) -> CommandKey {
@@ -764,7 +752,7 @@ macro_rules! read_impl {
         #[derive(Debug)]
         struct $struct($arg);
 
-        impl $crate::smc::ReadAction for $struct {
+        impl $crate::ReadAction for $struct {
             type Out = $out;
 
             fn key(&self) -> CommandKey {
@@ -890,36 +878,21 @@ read_impl!(GpuRailPower = POWER_GPU_RAIL -> Watt);
 read_impl!(DcInPower = POWER_DC_IN -> Watt);
 read_impl!(SystemTotalPower = POWER_SYSTEM_TOTAL -> Watt);
 
-struct Check<'a>(&'a str);
-
-impl<'a> ReadAction for Check<'a> {
-    type Out = DataValue;
-
-    fn key(&self) -> CommandKey {
-        let bytes = self.0.as_bytes();
-        let key = u32::from_be_bytes(bytes.try_into().unwrap());
-        CommandKey(key)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-struct DataType(DataValue, u32);
-
 macro_rules! int_tpe {
     ($data:ident as $narrow:ty as $wide:ty as $out:ident) => {{
-        Ok($crate::smc::DataValue::$out(<$wide>::from(
+        Ok($crate::DataValue::$out(<$wide>::from(
             <$narrow>::from_be_bytes($data.try_into()?),
         )))
     }};
     ($data:ident as $wide:ty as $out:ident) => {{
-        Ok($crate::smc::DataValue::$out(<$wide>::from_be_bytes(
+        Ok($crate::DataValue::$out(<$wide>::from_be_bytes(
             $data.try_into()?,
         )))
     }};
 }
 
 impl DataValue {
-    fn convert(data: &[u8], tpe: u32) -> Result<Self> {
+    fn convert(data: &[u8], tpe: u32) -> InternalResult<Self> {
         let tpe_str = tpe.to_be_bytes();
 
         match &tpe_str {
@@ -935,13 +908,13 @@ impl DataValue {
             b"ch8*" => {
                 let has_nul_termiantor = data.contains(&0);
                 let s = if has_nul_termiantor {
-                    unsafe { CStr::from_ptr(data.as_ptr() as *const _) }
+                    unsafe { ::std::ffi::CStr::from_ptr(data.as_ptr() as *const _) }
                         .to_string_lossy()
                         .into_owned()
                 } else {
                     let mut data = data.to_vec();
                     data.push(0);
-                    unsafe { CStr::from_ptr(data.as_ptr() as *const _) }
+                    unsafe { ::std::ffi::CStr::from_ptr(data.as_ptr() as *const _) }
                         .to_string_lossy()
                         .into_owned()
                 };
@@ -1006,7 +979,7 @@ fn char_to_int(c: u8) -> u8 {
 }
 
 #[inline]
-fn decode_fp_float(float: f32, f: u8) -> Result<DataValue> {
+fn decode_fp_float(float: f32, f: u8) -> InternalResult<DataValue> {
     Ok(DataValue::Float(float / f32::from(1_u16 << f)))
 }
 
@@ -1023,9 +996,74 @@ struct KeyInfo {
     data_size: u32,
 }
 
+impl StdError for Error {}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::SmcNotAvailable => write!(f, "SMC is not available, are you running on a Mac?"),
+            Error::InsufficientPrivileges => {
+                write!(f, "Could not perform SMC operation, try running with sudo")
+            }
+            Error::SmcError(code) => write!(f, "Could not perform SMC operation: {:08x}", code),
+            Error::DataError { key, tpe } => write!(
+                f,
+                "Could not read data for key {} of type {}",
+                tpe_name(key),
+                tpe_name(tpe)
+            ),
+        }
+    }
+}
+
+fn tpe_name(tpe: &u32) -> String {
+    let bytes = tpe.to_be_bytes();
+    String::from_utf8_lossy(&bytes).to_string()
+}
+
+type InternalResult<T> = std::result::Result<T, InternalError>;
+enum InternalError {
+    SmcNotFound,
+    SmcFailedToOpen(i32),
+    NotPrivlileged,
+    UnknownSmc(i32, u8),
+    _UnknownKey,
+    _DataKeyError(u32),
+    _DataValueError,
+    // for pub error
+    DataError { key: u32, tpe: u32 },
+}
+
+impl From<TryFromSliceError> for InternalError {
+    fn from(_: TryFromSliceError) -> Self {
+        Self::_DataValueError
+    }
+}
+
+impl From<TryFromIntError> for InternalError {
+    fn from(_: TryFromIntError) -> Self {
+        Self::_DataValueError
+    }
+}
+
+impl From<InternalError> for Error {
+    fn from(ie: InternalError) -> Self {
+        match ie {
+            InternalError::SmcNotFound => Error::SmcNotAvailable,
+            InternalError::SmcFailedToOpen(_) => Error::SmcNotAvailable,
+            InternalError::NotPrivlileged => Error::InsufficientPrivileges,
+            InternalError::UnknownSmc(code, _) => Error::SmcError(code),
+            InternalError::DataError { key, tpe } => Error::DataError { key, tpe },
+            InternalError::_UnknownKey => unreachable!(),
+            InternalError::_DataValueError => unreachable!(),
+            InternalError::_DataKeyError(_) => unreachable!(),
+        }
+    }
+}
+
 mod cffi {
     use super::*;
-    use std::{mem::size_of, os::raw::c_void, ptr};
+    use std::{ffi::CStr, mem::size_of, os::raw::c_void, ptr};
 
     #[allow(non_camel_case_types)]
     type kern_return_t = i32;
@@ -1097,12 +1135,12 @@ mod cffi {
     }
 
     impl SMCConnection {
-        pub(super) fn new() -> Result<Self> {
+        pub(super) fn new() -> InternalResult<Self> {
             let conn = unsafe { _smc_open() }?;
             Ok(Self { conn })
         }
 
-        pub(super) fn read_value<R>(&mut self, op: R) -> Result<R::Out>
+        pub(super) fn read_value<R>(&mut self, op: R) -> InternalResult<R::Out>
         where
             R: ReadAction,
             R::Out: Default,
@@ -1110,7 +1148,10 @@ mod cffi {
             Ok(self.opt_read_value(op)?.unwrap_or_default())
         }
 
-        pub(super) fn opt_read_value<R: ReadAction>(&mut self, op: R) -> Result<Option<R::Out>> {
+        pub(super) fn opt_read_value<R: ReadAction>(
+            &mut self,
+            op: R,
+        ) -> InternalResult<Option<R::Out>> {
             let result = self.try_read_value(op);
             match result {
                 Ok(result) => Ok(Some(result)),
@@ -1119,7 +1160,7 @@ mod cffi {
             }
         }
 
-        fn try_read_value<R: ReadAction>(&mut self, op: R) -> Result<R::Out> {
+        fn try_read_value<R: ReadAction>(&mut self, op: R) -> InternalResult<R::Out> {
             let key = *op.key();
             let result = unsafe { _smc_read_key(self.conn, key) };
             let result = result.map_err(|e| match e {
@@ -1135,7 +1176,7 @@ mod cffi {
             })
         }
 
-        pub(super) fn key_info<O: ReadAction>(&mut self, op: O) -> Result<KeyInfo> {
+        pub(super) fn key_info<O: ReadAction>(&mut self, op: O) -> InternalResult<KeyInfo> {
             let key = *op.key();
             let result = unsafe { _smc_key_info(self.conn, key) };
             result.map_err(|e| match e {
@@ -1147,7 +1188,7 @@ mod cffi {
             })
         }
 
-        pub(super) fn key_info_by_index(&mut self, index: u32) -> Result<KeyInfo> {
+        pub(super) fn key_info_by_index(&mut self, index: u32) -> InternalResult<KeyInfo> {
             let result = unsafe { _smc_key_index_info(self.conn, index) };
             result.map_err(|e| match e {
                 InternalError::_UnknownKey => InternalError::DataError {
@@ -1260,7 +1301,7 @@ mod cffi {
         fn mach_task_self() -> mach_port_t;
     }
 
-    unsafe fn _smc_open() -> Result<io_connect_t> {
+    unsafe fn _smc_open() -> InternalResult<io_connect_t> {
         let matching_dictionary = IOServiceMatching(b"AppleSMC\0".as_ptr());
         let device = IOServiceGetMatchingService(MASTER_PORT_DEFAULT, matching_dictionary);
 
@@ -1284,7 +1325,7 @@ mod cffi {
         let _ = IOServiceClose(conn);
     }
 
-    unsafe fn _smc_read_key(conn: mach_port_t, key: u32) -> Result<SMCVal> {
+    unsafe fn _smc_read_key(conn: mach_port_t, key: u32) -> InternalResult<SMCVal> {
         let mut input = SMCKeyData::default();
         input.key = key;
         input.data8 = SMCReadCommand::KeyInfo as u8;
@@ -1314,7 +1355,7 @@ mod cffi {
         Ok(val)
     }
 
-    unsafe fn _smc_key_info(conn: mach_port_t, key: u32) -> Result<KeyInfo> {
+    unsafe fn _smc_key_info(conn: mach_port_t, key: u32) -> InternalResult<KeyInfo> {
         let mut input = SMCKeyData::default();
         input.key = key;
         input.data8 = SMCReadCommand::KeyInfo as u8;
@@ -1332,7 +1373,7 @@ mod cffi {
         })
     }
 
-    unsafe fn _smc_key_index_info(conn: mach_port_t, index: u32) -> Result<KeyInfo> {
+    unsafe fn _smc_key_index_info(conn: mach_port_t, index: u32) -> InternalResult<KeyInfo> {
         let mut input = SMCKeyData::default();
         input.data8 = SMCReadCommand::ByIndex as u8;
         input.data32 = index;
@@ -1355,7 +1396,7 @@ mod cffi {
         conn: mach_port_t,
         input: &SMCKeyData,
         output: &mut SMCKeyData,
-    ) -> Result<()> {
+    ) -> InternalResult<()> {
         let mut output_size = size_of::<SMCKeyData>();
 
         let result = IOConnectCallStructMethod(

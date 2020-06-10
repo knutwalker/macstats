@@ -1,0 +1,12 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package]
+name = "macsmc"
+version = "0.1.0"
+authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
+description = "Library to call the macOS SMC"
+edition = "2018"
+license = "MIT OR Apache-2.0"
+workspace = ".."
+
+[target."cfg(target_os = \"macos\")".dependencies.libc]
+version = "0.2.71"
