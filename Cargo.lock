@@ -14,8 +14,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "macsmc"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cbbd3d3e7d2202a7bb365ed884c889312694692ab045e8ae9d055206fd49987"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "macstats"
 version = "0.1.0"
 dependencies = [
- "macsmc",
+ "macsmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

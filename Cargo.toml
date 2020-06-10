@@ -9,9 +9,13 @@ authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
 description = "Read system stats from macOS SMC"
 edition = "2018"
 license = "MIT OR Apache-2.0"
+homepage = "https://github.com/knutwalker/macstats/"
+repository = "https://github.com/knutwalker/macstats/"
+categories = ["command-line-utilities", "os"]
+keywords = ["macos", "smc", "cpu"]
 
 [dependencies.macsmc]
-path = "macsmc"
+version = "0.1.2"
 
 [profile.release]
 opt-level = 2
