@@ -1,11 +1,15 @@
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "macsmc"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
 description = "Library to call the macOS SMC"
 edition = "2018"
 license = "MIT OR Apache-2.0"
+homepage = "https://github.com/knutwalker/macstats/"
+repository = "https://github.com/knutwalker/macstats/"
+categories = ["os"]
+keywords = ["macos", "smc", "cpu"]
 workspace = ".."
 
 [target."cfg(target_os = \"macos\")".dependencies.libc]
