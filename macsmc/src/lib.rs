@@ -27,9 +27,6 @@
 #![cfg_attr(rustdoc, feature(doc_cfg))]
 #![cfg_attr(rustdoc, doc(cfg(target_os = "macos")))]
 
-#[cfg(all(not(target_os = "macos"), not(rustdoc)))]
-compile_error!("works only on macOS");
-
 use std::{
     array::TryFromSliceError,
     convert::{TryFrom, TryInto},
@@ -586,6 +583,9 @@ impl Smc {
     /// # Errors
     /// [Error::SmcNotAvailable](enum.Error.html#variant.SmcNotAvailable) If the SMC system is not available
     pub fn connect() -> Result<Self> {
+        if cfg!(not(target_os = "macos")) {
+            return Err(Error::SmcNotAvailable);
+        }
         let inner = cffi::SMCConnection::new()?;
         Ok(Smc { inner })
     }

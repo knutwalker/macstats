@@ -1,7 +1,7 @@
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [package]
 name = "macsmc"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
 description = "Library to call the macOS SMC"
 edition = "2018"
