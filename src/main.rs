@@ -1,5 +1,24 @@
-#[cfg(not(target_os = "macos"))]
-compile_error!("works only on macOS");
+//! SMC command line util for macOS
+#![warn(anonymous_parameters)]
+#![warn(missing_copy_implementations)]
+#![warn(missing_debug_implementations)]
+#![warn(missing_docs)]
+#![warn(trivial_numeric_casts)]
+#![warn(unused_extern_crates)]
+#![warn(unused_import_braces)]
+#![warn(unused_qualifications)]
+#![warn(unused_results)]
+#![warn(variant_size_differences)]
+
+#[cfg(doc)]
+macro_rules! add_docs_from {
+    ($x:expr) => {
+        #[doc = $x]
+        mod usage {}
+    };
+}
+#[cfg(doc)]
+add_docs_from!(include_str!("../README.md"));
 
 use macsmc::{Celsius, Error as SmcError, Smc, Watt};
 use std::{
@@ -10,7 +29,10 @@ use std::{
     time::Duration,
 };
 
+#[doc(hidden)]
 type Result<T> = std::result::Result<T, Error>;
+
+#[doc(hidden)]
 #[derive(Debug)]
 enum Error {
     Smc(SmcError),
@@ -42,12 +64,14 @@ impl From<SmcError> for Error {
     }
 }
 
+#[doc(hidden)]
 fn main() {
     if let Err(e) = run() {
         eprintln!("{}", e);
     }
 }
 
+#[doc(hidden)]
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
 enum Printables {
@@ -60,6 +84,7 @@ enum Printables {
     Debug = 64,
 }
 
+#[doc(hidden)]
 fn run() -> Result<()> {
     use Printables::*;
 
@@ -118,6 +143,7 @@ fn run() -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_cpu_temps(smc: &mut Smc) -> Result<()> {
     println!("--- CPU Temperatures [cpu] ---");
     println!();
@@ -135,6 +161,7 @@ fn print_cpu_temps(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_gpu_temps(smc: &mut Smc) -> Result<()> {
     println!("--- GPU Temperatures [gpu] ---");
     println!();
@@ -145,6 +172,7 @@ fn print_gpu_temps(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_other_temps(smc: &mut Smc) -> Result<()> {
     println!("--- Other Temperatures [other] ---");
     println!();
@@ -164,6 +192,7 @@ fn print_other_temps(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_fan_speeds(smc: &mut Smc) -> Result<()> {
     println!("--- Fan Speeds [fan] ---");
     println!();
@@ -180,6 +209,7 @@ fn print_fan_speeds(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 struct Time(Duration);
 
 impl Display for Time {
@@ -195,6 +225,7 @@ impl Display for Time {
     }
 }
 
+#[doc(hidden)]
 fn print_battery_info(smc: &mut Smc) -> Result<()> {
     println!("--- Battery Info [battery] ---");
     println!();
@@ -245,6 +276,7 @@ fn print_battery_info(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_power_consumption(smc: &mut Smc) -> Result<()> {
     println!("--- Power consumption [power] ---");
     println!();
@@ -264,6 +296,7 @@ fn print_power_consumption(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_all_keys(smc: &mut Smc) -> Result<()> {
     for info in smc.all_data()? {
         let info = info?;
@@ -283,26 +316,32 @@ fn print_all_keys(smc: &mut Smc) -> Result<()> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn print_temp(label: impl AsRef<str>, temp: Celsius) {
     print_value(label, temp, "°C", Celsius::thresholds())
 }
 
+#[doc(hidden)]
 fn print_power(label: impl AsRef<str>, power: Watt) {
     print_value(label, power, "W", Watt::thresholds())
 }
 
+#[doc(hidden)]
 fn print_line(label: impl AsRef<str>, val: impl Display) {
     println!("{:>24}  {}", label.as_ref(), val);
 }
 
+#[doc(hidden)]
 fn print_value_unit(label: impl AsRef<str>, val: impl Display, unit: impl AsRef<str>) {
     println!("{:>24}  {:8.2} {:6}", label.as_ref(), val, unit.as_ref(),);
 }
 
+#[doc(hidden)]
 fn print_percentage(label: impl AsRef<str>, val: impl Into<f64> + PartialOrd) {
     print_value(label, val.into(), "%", [99.0, 75.0, 30.0, 10.0])
 }
 
+#[doc(hidden)]
 fn print_value<T>(label: impl AsRef<str>, val: T, unit: impl AsRef<str>, thresholds: [T; 4])
 where
     T: Into<f64> + PartialOrd + Copy,
@@ -316,6 +355,7 @@ where
     );
 }
 
+#[doc(hidden)]
 fn sparkles<T>(val: T, thresholds: [T; 4]) -> String
 where
     T: Into<f64> + PartialOrd + Copy,
@@ -330,6 +370,7 @@ where
     }
 }
 
+#[doc(hidden)]
 fn sparkline<T>(val: T, thresholds: [T; 4], min: f64, max: f64, target_ord: Ordering) -> String
 where
     T: Into<f64> + PartialOrd + Copy,
