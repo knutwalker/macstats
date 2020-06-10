@@ -265,13 +265,18 @@ fn print_power_consumption(smc: &mut Smc) -> Result<()> {
 }
 
 fn print_all_keys(smc: &mut Smc) -> Result<()> {
-    let number_of_keys = smc.number_of_keys()?;
-    for i in 0..number_of_keys {
-        let info = smc.key_info_by_index(i)?;
-        if let Ok(data) = smc.key_data_by_index(i) {
-            println!("{} == {:?}", info, data.1);
-        } else {
-            println!("{} xxx", info);
+    for info in smc.all_data()? {
+        let info = info?;
+        match info.value {
+            Ok(Some(value)) => {
+                println!("{} == {:?}", info.key, value);
+            }
+            Ok(None) => {
+                println!("{} == N/A", info.key);
+            }
+            Err(_) => {
+                println!("{} == xxx", info.key);
+            }
         }
     }
 

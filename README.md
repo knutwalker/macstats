@@ -9,5 +9,5 @@ make
 make install
 ```
 
-This will put the binary into `/usr/local/bin/`, which can be changed with,
+This will put the binary into `/usr/local/bin/`, which can be changed with `$PREFIX`,
 e.g. `PREFIX=/opt make install` to put it in `/opt/bin`.
