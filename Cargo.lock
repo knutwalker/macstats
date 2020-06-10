@@ -8,16 +8,16 @@ checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
 
 [[package]]
 name = "macsmc"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "libc",
 ]
 
 [[package]]
 name = "macsmc"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cbbd3d3e7d2202a7bb365ed884c889312694692ab045e8ae9d055206fd49987"
+checksum = "606551716c534271fb810b8eccb4890650eed44fa88d20862a584f67057ab19c"
 dependencies = [
  "libc",
 ]
@@ -26,5 +26,5 @@ dependencies = [
 name = "macstats"
 version = "0.1.0"
 dependencies = [
- "macsmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macsmc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
