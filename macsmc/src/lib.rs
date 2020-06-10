@@ -24,8 +24,10 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
+#![cfg_attr(rustdoc, feature(doc_cfg))]
+#![cfg_attr(rustdoc, doc(cfg(target_os = "macos")))]
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(not(target_os = "macos"), not(rustdoc)))]
 compile_error!("works only on macOS");
 
 use std::{
