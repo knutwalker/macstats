@@ -675,6 +675,7 @@ impl Smc {
         })
     }
 
+    #[cfg(target_os = "macos")]
     fn number_of_cpus(&mut self) -> Result<u8> {
         Ok(cffi::num_cpus().min(255) as u8)
     }
@@ -700,6 +701,7 @@ impl Smc {
     ///
     /// # Errors
     /// [`Error::DataError`] If there was something wrong while getting the data
+    #[cfg(any(doc, target_os = "macos"))]
     pub fn cpu_core_temps(&mut self) -> Result<CpuIter> {
         Ok(CpuIter::new(self)?)
     }
@@ -945,6 +947,7 @@ iter_impl! {
     BatteryIter(u8) = number_of_batteries: battery_detail -> BatteryDetail
 }
 
+#[cfg(target_os = "macos")]
 iter_impl! {
     /// Iterator for the [`Celsius`] temperatures of all cpu cores.
     CpuIter(u8) = number_of_cpus: cpu_core_temperature -> Celsius
@@ -1487,7 +1490,9 @@ impl From<InternalError> for Error {
 
 mod cffi {
     use super::*;
-    use std::{ffi::CStr, mem::size_of, os::raw::c_void, ptr};
+    #[cfg(target_os = "macos")]
+    use std::{ffi::CStr, ptr};
+    use std::{mem::size_of, os::raw::c_void};
 
     #[allow(non_camel_case_types)]
     type kern_return_t = i32;
@@ -1518,6 +1523,7 @@ mod cffi {
 
     const KERNEL_INDEX_SMC: u32 = 2;
 
+    #[cfg(target_os = "macos")]
     pub(super) fn num_cpus() -> i32 {
         let mut cpus: i32 = 0;
         let mut cpus_size = std::mem::size_of_val(&cpus);
