@@ -1,12 +1,16 @@
-[![Latest Version](https://img.shields.io/crates/v/macstats.svg)](https://crates.io/crates/macstats)
+[![crates.io](https://img.shields.io/crates/v/macstats.svg)](https://crates.io/crates/macstats)
 
 # macstats
+
+latest version: 0.1.1
+
+SMC command line util for macOS
 
 Read cpu temperatures and fan speeds from macOS SMC
 
 ## Examples
 
-```
+```bash,ignore
 > macstats
 ... a lot of output
 
@@ -38,6 +42,8 @@ Read cpu temperatures and fan speeds from macOS SMC
 ... dump all knwon symbols
 ```
 
+The functionality is provided by [`macsmc`](https://docs.rs/macsmc/*/macsmc/).
+
 ## Build
 
 ```
@@ -47,3 +53,6 @@ make install
 
 This will put the binary into `/usr/local/bin/`, which can be changed with `$PREFIX`,
 e.g. `PREFIX=/opt make install` to put it in `/opt/bin`.
+
+
+License: MIT OR Apache-2.0

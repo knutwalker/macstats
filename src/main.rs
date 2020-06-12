@@ -1,4 +1,42 @@
 //! SMC command line util for macOS
+//!
+//! Read cpu temperatures and fan speeds from macOS SMC
+//!
+//! # Examples
+//!
+//! ```bash,ignore
+//! > macstats
+//! ... a lot of output
+//!
+//! > macstats all
+//! ... even more output
+//!
+//! > macstats temp
+//! ... only temperatures
+//!
+//! > macstats cpu
+//! ... only CPU temperatures
+//!
+//! > macstats gpu
+//! ... only GPU temperatures
+//!
+//! > macstats other
+//! ... only other temperatures
+//!
+//! > macstats fan
+//! ... only fan speeds
+//!
+//! > macstats battery
+//! ... only battery info
+//!
+//! > macstats power
+//! ... only power info
+//!
+//! > macstats debug
+//! ... dump all knwon symbols
+//! ```
+//!
+//! The functionality is provided by [`macsmc`](https://docs.rs/macsmc/*/macsmc/).
 #![warn(anonymous_parameters)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
@@ -9,16 +47,6 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
-
-#[cfg(doc)]
-macro_rules! add_docs_from {
-    ($x:expr) => {
-        #[doc = $x]
-        mod usage {}
-    };
-}
-#[cfg(doc)]
-add_docs_from!(include_str!("../README.md"));
 
 use macsmc::{Celsius, Error as SmcError, Smc, Watt};
 use std::{
