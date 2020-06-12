@@ -2,8 +2,6 @@
 
 # {{crate}}
 
-latest version: {{version}}
-
 {{readme}}
 
 ## Build

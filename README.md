@@ -2,8 +2,6 @@
 
 # macstats
 
-latest version: 0.1.1
-
 SMC command line util for macOS
 
 Read cpu temperatures and fan speeds from macOS SMC
