@@ -4,7 +4,7 @@ members = ["macsmc"]
 
 [package]
 name = "macstats"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
 description = "Read system stats from macOS SMC"
 edition = "2018"
