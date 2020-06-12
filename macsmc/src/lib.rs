@@ -13,7 +13,7 @@
 //! # }
 //! ```
 //!
-//! See [Smc](struct.Smc.html) for the starting point.
+//! See [`Smc`] for the starting point.
 #![warn(anonymous_parameters)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
@@ -586,7 +586,7 @@ impl Smc {
     /// Creates a new connection to the SMC system.
     ///
     /// # Errors
-    /// [Error::SmcNotAvailable](enum.Error.html#variant.SmcNotAvailable) If the SMC system is not available
+    /// [`Error::SmcNotAvailable`] If the SMC system is not available
     pub fn connect() -> Result<Self> {
         let inner = cffi::SMCConnection::new()?;
         Ok(Smc { inner })
@@ -595,7 +595,7 @@ impl Smc {
     /// Returns an iterator over all [FanSpeed](struct.FanSpeed.html) items available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn fans(&mut self) -> Result<FanIter> {
         FanIter::new(self)
     }
@@ -621,10 +621,10 @@ impl Smc {
         })
     }
 
-    /// Returns the overall [BatteryInfo](struct.BatteryInfo.html)
+    /// Returns the overall [`BatteryInfo`]
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn battery_info(&mut self) -> Result<BatteryInfo> {
         let BatteryStatus {
             charging,
@@ -650,10 +650,10 @@ impl Smc {
         Ok(self.inner.read_value(GetNumberOfBatteries)?)
     }
 
-    /// Returns an iterator over all [BatteryDetail](struct.BatteryDetail.html) items available.
+    /// Returns an iterator over all [`BatteryDetail`] items available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn battery_details(&mut self) -> Result<BatteryIter> {
         Ok(BatteryIter::new(self)?)
     }
@@ -679,10 +679,10 @@ impl Smc {
         Ok(cffi::num_cpus().min(255) as u8)
     }
 
-    /// Returns the overall [CpuTemperatures](struct.CpuTemperatures.html) available.
+    /// Returns the overall [`CpuTemperatures`] available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn cpu_temperature(&mut self) -> Result<CpuTemperatures> {
         let proximity = self.inner.read_value(CpuProximityTemperature)?;
         let die = self.inner.read_value(CpuDieTemperature)?;
@@ -696,10 +696,10 @@ impl Smc {
         })
     }
 
-    /// Returns an iterator over all cpu core temperatures in [Celcius](struct.Celcius.html).
+    /// Returns an iterator over all cpu core temperatures in [`Celsius`].
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn cpu_core_temps(&mut self) -> Result<CpuIter> {
         Ok(CpuIter::new(self)?)
     }
@@ -708,20 +708,20 @@ impl Smc {
         Ok(self.inner.read_value(CpuCoreTemperature(core + 1))?)
     }
 
-    /// Returns the overall [GpuTemperatures](struct.GpuTemperatures.html) available.
+    /// Returns the overall [`GpuTemperatures`] available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn gpu_temperature(&mut self) -> Result<GpuTemperatures> {
         let proximity = self.inner.read_value(GpuProximityTemperature)?;
         let die = self.inner.read_value(GpuDieTemperature)?;
         Ok(GpuTemperatures { proximity, die })
     }
 
-    /// Returns the overall information about [OtherTemperatures](struct.OtherTemperatures.html) available.
+    /// Returns the overall information about [`OtherTemperatures`] available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn other_temperatures(&mut self) -> Result<OtherTemperatures> {
         let memory_bank_proximity = self.inner.read_value(GetMemoryBankProximityTemperature)?;
         let mainboard_proximity = self.inner.read_value(GetMainboardProximityTemperature)?;
@@ -751,10 +751,10 @@ impl Smc {
         })
     }
 
-    /// Returns the overall [CpuPower](struct.CpuPower.html) information available.
+    /// Returns the overall [`CpuPower`] information available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn cpu_power(&mut self) -> Result<CpuPower> {
         let core = self.inner.read_value(CpuCorePower)?;
         let dram = self.inner.read_value(CpuDramPower)?;
@@ -770,26 +770,26 @@ impl Smc {
         })
     }
 
-    /// Returns the overall [GpuPower](struct.GpuPower.html) information available.
+    /// Returns the overall `GPUPower` information in [`Watt`] available.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn gpu_power(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(GpuRailPower)?)
     }
 
-    /// Returns the current amount of [Power](struct.Watt.html) being drawn from DC.
+    /// Returns the current amount of power being in [`Watt`] drawn from DC.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn power_dc_in(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(DcInPower)?)
     }
 
-    /// Returns the overall [Power](struct.Watt.html) draw of the whole system.
+    /// Returns the overall power draw in [`Watt`] of the whole system.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn power_system_total(&mut self) -> Result<Watt> {
         Ok(self.inner.read_value(SystemTotalPower)?)
     }
@@ -797,7 +797,7 @@ impl Smc {
     /// Returns the number of available keys to query.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn number_of_keys(&mut self) -> Result<u32> {
         Ok(self.inner.read_value(NumberOfKeys)?)
     }
@@ -805,7 +805,7 @@ impl Smc {
     /// Returns an iterator over the available keys.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn all_keys(&mut self) -> Result<KeysIter> {
         KeysIter::new(self)
     }
@@ -813,7 +813,7 @@ impl Smc {
     /// Returns an iterator over the available data points.
     ///
     /// # Errors
-    /// [Error::DataError](enum.Error.html#variant.DataError) If there was something wrong while getting the data
+    /// [`Error::DataError`] If there was something wrong while getting the data
     pub fn all_data(&mut self) -> Result<DataIter> {
         DataIter::new(self)
     }
@@ -936,27 +936,27 @@ macro_rules! iter_impl {
 }
 
 iter_impl! {
-    /// Iterator for [FanSpeed](struct.FanSpeed.html)s.
+    /// Iterator for [`FanSpeed`]s.
     FanIter(u8) = number_of_fans: fan_speed -> FanSpeed
 }
 
 iter_impl! {
-    /// Iterator for [BatteryDetail](struct.BatteryDetail.html)s.
+    /// Iterator for [`BatteryDetail`]s.
     BatteryIter(u8) = number_of_batteries: battery_detail -> BatteryDetail
 }
 
 iter_impl! {
-    /// Iterator for the [Celsius](struct.Celsius.html) temperatures of all cpu cores.
+    /// Iterator for the [`Celsius`] temperatures of all cpu cores.
     CpuIter(u8) = number_of_cpus: cpu_core_temperature -> Celsius
 }
 
 iter_impl! {
-    /// Iterator for all [key infos](struct.DbkKeyInfo.html).
+    /// Iterator for all [`DbgKeyInfo`]s.
     KeysIter(u32) = number_of_keys: key_info_by_index -> DbgKeyInfo
 }
 
 iter_impl! {
-    /// Iterator for all [data items](struct.Dbg.html).
+    /// Iterator for all [`Dbg`]s.
     DataIter(u32) = number_of_keys: key_data_by_index -> Dbg
 }
 
