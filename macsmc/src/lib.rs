@@ -24,8 +24,11 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
-#![cfg_attr(rustdoc, feature(doc_cfg))]
-#![cfg_attr(rustdoc, doc(cfg(target_os = "macos")))]
+#![cfg_attr(doc, feature(doc_cfg))]
+#![cfg_attr(doc, doc(cfg(target_os = "macos")))]
+
+#[cfg(all(not(target_os = "macos"), not(doc)))]
+compile_error!("This crate only works on macOS");
 
 use std::{
     array::TryFromSliceError,
@@ -583,9 +586,6 @@ impl Smc {
     /// # Errors
     /// [Error::SmcNotAvailable](enum.Error.html#variant.SmcNotAvailable) If the SMC system is not available
     pub fn connect() -> Result<Self> {
-        if cfg!(not(target_os = "macos")) {
-            return Err(Error::SmcNotAvailable);
-        }
         let inner = cffi::SMCConnection::new()?;
         Ok(Smc { inner })
     }
