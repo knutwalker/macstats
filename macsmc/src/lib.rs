@@ -25,7 +25,6 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 #![cfg_attr(doc, feature(doc_cfg))]
-#![cfg_attr(doc, doc(cfg(target_os = "macos")))]
 
 #[cfg(all(not(target_os = "macos"), not(doc)))]
 compile_error!("This crate only works on macOS");
@@ -575,12 +574,15 @@ pub struct DbgKeyInfo {
 /// # Ok(())
 /// # }
 /// ```
+#[cfg_attr(doc, doc(cfg(target_os = "macos")))]
 #[derive(Debug)]
 pub struct Smc {
     inner: cffi::SMCConnection,
 }
 
 impl Smc {
+    #![cfg_attr(doc, doc(cfg(target_os = "macos")))]
+
     /// Creates a new connection to the SMC system.
     ///
     /// # Errors
