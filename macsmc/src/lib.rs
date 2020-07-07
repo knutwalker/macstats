@@ -947,7 +947,7 @@ iter_impl! {
     BatteryIter(u8) = number_of_batteries: battery_detail -> BatteryDetail
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(doc, target_os = "macos"))]
 iter_impl! {
     /// Iterator for the [`Celsius`] temperatures of all cpu cores.
     CpuIter(u8) = number_of_cpus: cpu_core_temperature -> Celsius
